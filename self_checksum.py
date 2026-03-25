@@ -39,6 +39,9 @@ class SelfChecksumScene(Scene):
             "Сегмент .text", font_size=22, color=BLUE_C
         ).next_to(self.segment_rect, UP, buff=0.15)
 
+        #self.segment_icon = ImageMobject("pic/Screenshot_1.png").scale_to_fit_height(0.5)
+        #self.segment_icon.next_to(self.segment_label, RIGHT, buff=0.15)
+
         # текстовые объекты hex-байтов
         self.hex_mobjects = VGroup(*[
             Text(b, font="Monospace", font_size=18, color=WHITE)
@@ -65,13 +68,14 @@ class SelfChecksumScene(Scene):
         ).move_to(self.rsrc_rect.get_center() + UP * 0.1)
 
         self.ref_value = Text(
-            "a3b2c1d0e4f56789...", font="Monospace", font_size=20, color=WHITE
+            '"a3b2c1d0e4f56789...38fe"', font="Monospace", font_size=20, color=WHITE
         ).move_to(self.rsrc_rect.get_center() + DOWN * 0.3)
 
         # анимация появления
         self.play(
             FadeIn(self.segment_rect),
             Write(self.segment_label),
+            #FadeIn(self.segment_icon),
             run_time=1,
         )
         self.play(
@@ -92,6 +96,30 @@ class SelfChecksumScene(Scene):
             run_time=1,
         )
         self.wait(0.5)
+
+        # ---блок SHA-256 появляется здесь, до сканирования------------------
+        self.hash_rect = Rectangle(
+            width=4.0, height=1.8,
+            color=ORANGE, fill_opacity=0.1,
+            stroke_width=2,
+        ).shift(RIGHT * 3.2 + UP * 1.3)
+
+        self.hash_label_text = Text("SHA-256", font_size=24, color=ORANGE).next_to(
+            self.hash_rect, UP, buff=0.15
+        )
+
+        self.seg_to_hash_arrow = Arrow(
+            self.segment_rect.get_right(),
+            self.hash_rect.get_left(),
+            color=ORANGE, stroke_width=2, buff=0.1,
+        )
+
+        self.play(
+            FadeIn(self.hash_rect),
+            Write(self.hash_label_text),
+            GrowArrow(self.seg_to_hash_arrow),
+            run_time=1,
+        )
 
     def animate_scanning(self):
         # создание курсора сканирования
@@ -116,36 +144,11 @@ class SelfChecksumScene(Scene):
         self.wait(0.3)
 
     def compute_hash(self):
-        # блок хеш-функции
-        self.hash_rect = Rectangle(
-            width=4.0, height=1.8,
-            color=ORANGE, fill_opacity=0.1,
-            stroke_width=2,
-        ).shift(RIGHT * 3.2 + UP * 1.3)
-
-        hash_label = Text("SHA-256", font_size=24, color=ORANGE).next_to(
-            self.hash_rect, UP, buff=0.15
-        )
-
-        self.play(FadeIn(self.hash_rect), Write(hash_label), run_time=0.8)
-
-        # анимация
-        copies = VGroup(*[self.hex_mobjects[i].copy() for i in range(0, 48, 4)])
-        anims = []
-        for c in copies:
-            anims.append(
-                c.animate.move_to(self.hash_rect.get_center()).scale(0.3).set_opacity(0)
-            )
-
-        self.play(
-            LaggedStart(*anims, lag_ratio=0.08),
-            run_time=2.5,
-        )
-        self.remove(*copies)
+        # блок SHA-256 уже создан в build_segments — просто показываем результат
 
         # отображение вычисленного хеша
         self.hash_value = Text(
-            "a3b2c1d0e4f56789...", font="Monospace", font_size=20, color=YELLOW
+            '"a3b2c1d0e4f56789...ac45"', font="Monospace", font_size=20, color=YELLOW
         ).move_to(self.hash_rect.get_center() + DOWN * 0.15)
 
         computed_label = Text(
@@ -214,15 +217,18 @@ class SelfChecksumScene(Scene):
 
         patch_label = Text(
             "Патч!", font_size=20, color=RED
-        ).next_to(patched_byte, UP, buff=0.3)
+        ).next_to(patched_byte, UP, buff=0.5)
+
+        patch_icon = ImageMobject("pic/Screenshot_1.png").scale_to_fit_height(1.5)
+        patch_icon.next_to(patch_label, RIGHT, buff=0.5)
 
         self.play(
             Transform(patched_byte, new_byte),
             FadeIn(patch_label, shift=DOWN * 0.2),
+            FadeIn(patch_icon, shift=DOWN * 0.2),
             run_time=0.8,
         )
         self.wait(0.5)
-        self.play(FadeOut(patch_label), run_time=0.4)
 
         # вспышка по всем байтам
         flash_rect = SurroundingRectangle(
@@ -235,7 +241,7 @@ class SelfChecksumScene(Scene):
 
         # новое значение хеша
         new_hash = Text(
-            "7f1e9a42bc8d3017...", font="Monospace", font_size=20, color=RED
+            "7f1e9a42bc8d3017...bca4", font="Monospace", font_size=20, color=RED
         ).move_to(self.hash_value.get_center())
 
         self.play(Transform(self.hash_value, new_hash), run_time=0.8)
@@ -253,10 +259,13 @@ class SelfChecksumScene(Scene):
             Line(DL * 0.3, UR * 0.3, color=RED, stroke_width=5),
         ).scale(1.5).shift(RIGHT * 3.2 + DOWN * 1.5)
 
-        warning_text = Text(
-            "ВНИМАНИЕ: Приложение модифицировано!",
-            font_size=22, color=RED,
-        ).next_to(cross, DOWN, buff=0.3)
+        warning_text = VGroup(
+            Text("ВНИМАНИЕ: Приложение модифицировано!", font_size=22, color=RED),
+            Text(
+                "Предотвращение ввода ПИН-кода в скомпрометированное приложение",
+                font_size=16, color=RED,
+            ),
+        ).arrange(DOWN, buff=0.15).next_to(cross, DOWN, buff=0.3)
 
         self.play(Create(cross), run_time=0.5)
         self.play(Write(warning_text), run_time=1.2)
