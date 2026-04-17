@@ -148,7 +148,7 @@ class SelfChecksumScene(Scene):
 
         # отображение вычисленного хеша
         self.hash_value = Text(
-            '"a3b2c1d0e4f56789...ac45"', font="Monospace", font_size=20, color=YELLOW
+            '"a3b2c1d0e4f56789...38fe"', font="Monospace", font_size=20, color=YELLOW
         ).move_to(self.hash_rect.get_center() + DOWN * 0.15)
 
         computed_label = Text(
@@ -217,7 +217,7 @@ class SelfChecksumScene(Scene):
 
         patch_label = Text(
             "Патч!", font_size=20, color=RED
-        ).next_to(patched_byte, UP, buff=0.5)
+        ).next_to(patched_byte, UP, buff=0.15)
 
         patch_icon = ImageMobject("pic/Screenshot_1.png").scale_to_fit_height(1.5)
         patch_icon.next_to(patch_label, RIGHT, buff=0.5)
@@ -230,9 +230,9 @@ class SelfChecksumScene(Scene):
         )
         self.wait(0.5)
 
-        # вспышка по всем байтам
+        # вспышка только по пропатченному байту
         flash_rect = SurroundingRectangle(
-            self.hex_mobjects, color=YELLOW, buff=0.15, stroke_width=2
+            patched_byte, color=YELLOW, buff=0.08, stroke_width=3
         )
         self.play(
             ShowPassingFlash(flash_rect, time_width=0.4),
