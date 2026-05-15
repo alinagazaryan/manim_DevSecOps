@@ -30,9 +30,9 @@ FONT = "Monospace"
 
 
 # ── Фабрика блока драйвера ──────────────────────────────
-def create_driver_block(name: str, color: str, width=3.2, height=0.55) -> VGroup:
+def create_driver_block(name: str, color: str, width=3.2, height=0.38) -> VGroup:
     rect = RoundedRectangle(
-        corner_radius=0.08,
+        corner_radius=0.09,
         width=width,
         height=height,
         fill_color=color,
@@ -40,7 +40,7 @@ def create_driver_block(name: str, color: str, width=3.2, height=0.55) -> VGroup
         stroke_color=color,
         stroke_width=2,
     )
-    label = Text(name, font=FONT, font_size=18, color=WHITE)
+    label = Text(name, font=FONT, font_size=16, color=WHITE)
     label.move_to(rect.get_center())
     return VGroup(rect, label)
 
@@ -67,31 +67,65 @@ def create_data_packet(text: str, color: str, font_size=16) -> VGroup:
     label = Text(text, font=FONT, font_size=font_size, color=color)
     rect = SurroundingRectangle(
         label, buff=0.12,
-        fill_color=color, fill_opacity=0.12,
+        fill_color=color, fill_opacity=0.06,
         stroke_color=color, stroke_width=1.5,
         corner_radius=0.06,
     )
     return VGroup(rect, label)
 
 
-# ── IRP-карточка ─────────────────────────────────────────
-def create_irp_card(major_function: str, show_stack_locations=False) -> VGroup:
-    lines = [
-        f"MajorFunction: {major_function}",
-        "IoStatus: STATUS_PENDING",
-        "UserBuffer: 0xFFFFFA80`1234",
+# ── IRP-карточка (C struct, 2 колонки) ──────────────────
+def create_irp_card(major_function: str, show_stack_locations=False, level_label: str = None) -> VGroup:
+    # Левая колонка — имена полей
+    left_fields = [
+        "  MajorFunction:",
+        "  IoStatus:",
+        "  UserBuffer:",
+    ]
+    # Правая колонка — значения
+    right_values = [
+        f" {major_function}",
+        " STATUS_PENDING",
+        " 0xFFFFFA80`1234",
     ]
     if show_stack_locations:
-        lines += [
-            "IO_STACK_LOCATION[0]: (fltmgr)",
-            "IO_STACK_LOCATION[1]: (NTFS)",
-            "IO_STACK_LOCATION[2]: (disk)",
+        left_fields += [
+            "  IoStackLocation[0]:",
+            "  IoStackLocation[1]:",
+            "  IoStackLocation[2]:",
+        ]
+        right_values += [
+            " (fltmgr)",
+            " (NTFS)",
+            " (disk)",
         ]
 
-    header = Text("IRP", font=FONT, font_size=18, color=IRP_COLOR, weight=BOLD)
-    body_texts = [Text(l, font=FONT, font_size=12, color=WHITE) for l in lines]
-    body = VGroup(*body_texts).arrange(DOWN, aligned_edge=LEFT, buff=0.08)
-    content = VGroup(header, body).arrange(DOWN, buff=0.15, aligned_edge=LEFT)
+    header_line = Text("typedef struct _IRP {", font=FONT, font_size=15, color=IRP_COLOR, weight=BOLD)
+    footer_line = Text("} IRP, *PIRP;", font=FONT, font_size=15, color=IRP_COLOR, weight=BOLD)
+
+    left_col = VGroup(*[Text(f, font=FONT, font_size=13, color=GRAY_B) for f in left_fields])
+    left_col.arrange(DOWN, aligned_edge=LEFT, buff=0.07)
+
+    right_col = VGroup(*[Text(v, font=FONT, font_size=13, color=WHITE) for v in right_values])
+    right_col.arrange(DOWN, aligned_edge=LEFT, buff=0.07)
+
+    # Выровнять строки по вертикали
+    for l, r in zip(left_col, right_col):
+        r.align_to(l, UP)
+    right_col.next_to(left_col, RIGHT, buff=0.05)
+    # Align each pair
+    for lf, rv in zip(left_col, right_col):
+        rv.set_y(lf.get_y())
+
+    body = VGroup(left_col, right_col)
+
+    content = VGroup(header_line, body, footer_line).arrange(DOWN, buff=0.12, aligned_edge=LEFT)
+
+    # Уровень формирования IRP
+    # if level_label:
+    #     level_text = Text(f"▲ формируется: {level_label}", font=FONT, font_size=11, color=IRP_COLOR)
+    #     level_text.next_to(content, UP, buff=0.08, aligned_edge=LEFT)
+    #     content = VGroup(level_text, content)
 
     bg = SurroundingRectangle(
         content, buff=0.18,
@@ -130,26 +164,66 @@ def create_boundary_line() -> VGroup:
     return VGroup(line, label_left, label_right)
 
 
-# ── 2D-диск ─────────────────────────────────────────────
-def create_disk_2d(width=2.8, height=1.0) -> VGroup:
-    top_ellipse = Ellipse(width=width, height=0.35, color=GRAY, fill_opacity=0.3, stroke_width=1.5)
-    body = Rectangle(width=width, height=height, color=GRAY, fill_opacity=0.15, stroke_width=1.5)
-    bottom_ellipse = Ellipse(width=width, height=0.35, color=GRAY, fill_opacity=0.15, stroke_width=1.5)
+# ── 2D-диск (цилиндр HDD/SSD) ───────────────────────────
+def create_disk_2d(width=1.6, height=0.7) -> VGroup:
+    cyl_w = width
+    cyl_h = height * 0.7
+    ellipse_ry = height * 0.18
 
-    body.next_to(top_ellipse, DOWN, buff=0)
-    bottom_ellipse.move_to(body.get_bottom())
+    # Тело цилиндра (прямоугольник)
+    body = Rectangle(
+        width=cyl_w, height=cyl_h,
+        fill_color="#2a2a2a", fill_opacity=0.7,
+        stroke_color="#888888", stroke_width=1.5,
+    )
 
-    label = Text("Disk (sectors)", font=FONT, font_size=13, color=GRAY_B)
-    label.move_to(body.get_center())
+    # Нижний эллипс (дно)
+    bottom_ellipse = Ellipse(
+        width=cyl_w, height=ellipse_ry * 2,
+        fill_color="#1a1a1a", fill_opacity=0.9,
+        stroke_color="#888888", stroke_width=1.5,
+    ).move_to(body.get_bottom())
 
+    # Верхний эллипс (крышка)
+    top_ellipse = Ellipse(
+        width=cyl_w, height=ellipse_ry * 2,
+        fill_color="#383838", fill_opacity=0.9,
+        stroke_color="#aaaaaa", stroke_width=1.5,
+    ).move_to(body.get_top())
+
+    # Концентрические кольца на верхнем эллипсе (имитация пластины)
+    rings = VGroup()
+    for r_scale in [0.25, 0.50, 0.75]:
+        ring = Ellipse(
+            width=cyl_w * r_scale, height=ellipse_ry * 2 * r_scale,
+            stroke_color="#555555", stroke_width=0.8, fill_opacity=0,
+        ).move_to(top_ellipse.get_center())
+        rings.add(ring)
+
+    # «Головка» чтения — маленький прямоугольник + рычаг
+    arm_start = top_ellipse.get_center() + RIGHT * (cyl_w * 0.05)
+    arm_end = top_ellipse.get_center() + RIGHT * (cyl_w * 0.42) + UP * (ellipse_ry * 0.3)
+    arm = Line(arm_start, arm_end, stroke_color="#aaaaaa", stroke_width=1.2)
+    head = Dot(radius=0.045, color="#55ff55").move_to(arm_end)
+
+    # LED-индикатор на боку
+    led = Dot(radius=0.05, color="#55ff55").move_to(body.get_right() + LEFT * 0.1)
+
+    label = Text("HDD / SSD", font=FONT, font_size=12, color=GRAY_B)
+    label.next_to(body, DOWN, buff=0.05 + ellipse_ry)
+
+    # Сектора (невидимые, заполняются при записи)
     sectors = VGroup()
     for i in range(6):
-        s = Square(side_length=0.22, stroke_color=GRAY, stroke_width=0.5, fill_opacity=0)
+        s = RoundedRectangle(
+            corner_radius=0.02, width=0.26, height=0.18,
+            stroke_color="#555555", stroke_width=0.5, fill_opacity=0,
+        )
         sectors.add(s)
     sectors.arrange(RIGHT, buff=0.05)
-    sectors.move_to(body.get_center() + DOWN * 0.25)
+    sectors.next_to(label, DOWN, buff=0.06)
 
-    return VGroup(top_ellipse, body, bottom_ellipse, label, sectors)
+    return VGroup(body, bottom_ellipse, top_ellipse, rings, arm, head, led, label, sectors)
 
 
 # ── Подсветка блока ──────────────────────────────────────
@@ -233,22 +307,107 @@ def animate_crypto(scene: Scene, packet: VGroup, mode: str, new_text: str, new_c
 # ── Проверка расширения ──────────────────────────────────
 def show_extension_check(scene: Scene, position, major: str) -> VGroup:
     lines = [
-        'FltGetFileNameInformation() -> "test.lab2ext"',
-        'RtlEqualUnicodeString("lab2ext") -> TRUE',
-        f'MajorFunction == {major} -> TRUE',
+        'FltGetFileName',
+        'Information()',
+        '-> "test.lab2ext"',
+        'RtlEqualUnicodeString',
+        '("lab2ext") -> TRUE',
+        'MajorFunction',
+        f'== {major}',
+        '-> TRUE',
     ]
+
     texts = VGroup(*[
-        Text(l, font=FONT, font_size=11, color=PLAINTEXT_COLOR) for l in lines
+        Text(l, font=FONT, font_size=11, color=PLAINTEXT_COLOR)
+        for l in lines
     ]).arrange(DOWN, aligned_edge=LEFT, buff=0.06)
+
     bg = SurroundingRectangle(
-        texts, buff=0.12,
-        fill_color="#002200", fill_opacity=0.7,
-        stroke_color=PLAINTEXT_COLOR, stroke_width=1,
-        corner_radius=0.06,
+        texts,
+        buff=0.12,
+        fill_color="#002200",
+        fill_opacity=0.7,
+        stroke_color=PLAINTEXT_COLOR,
+        stroke_width=1.5,
+        corner_radius=0.08,
     )
+
     group = VGroup(bg, texts).move_to(position)
     scene.play(FadeIn(group, run_time=0.6))
     scene.wait(1.5)
+    return group
+
+def show_postop_write(scene: Scene, position) -> VGroup:
+    lines = [
+        'PostOp Write',
+        'FLT_POSTOP',
+        'FINISHED_PROC',
+        'шифрование',
+        'уже выполнено',
+        'в Pre',
+    ]
+
+    texts = VGroup(*[
+        Text(l, font=FONT, font_size=11, color=PLAINTEXT_COLOR)
+        for l in lines
+    ]).arrange(
+        DOWN,
+        aligned_edge=LEFT,
+        buff=0.06,
+    )
+
+    bg = SurroundingRectangle(
+        texts,
+        buff=0.12,
+        fill_color="#002200",
+        fill_opacity=0.7,
+        stroke_color=PLAINTEXT_COLOR,
+        stroke_width=1.5,
+        corner_radius=0.08,
+    )
+
+    group = VGroup(bg, texts).move_to(position)
+
+    scene.play(FadeIn(group, run_time=0.6))
+    scene.wait(1.5)
+
+    return group
+
+
+def show_preflt_write(scene: Scene, position) -> VGroup:
+    lines = [
+        'PreOp Read',
+        'FLT_PREOP',
+        'SUCCESS_CB',
+        'расшифровка',
+        'будет после',
+        'чтения диска',
+    ]
+
+    texts = VGroup(*[
+        Text(l, font=FONT, font_size=11, color=PLAINTEXT_COLOR)
+        for l in lines
+    ]).arrange(
+        DOWN,
+        aligned_edge=LEFT,
+        buff=0.06,
+    )
+
+    bg = SurroundingRectangle(
+        texts,
+        buff=0.12,
+        fill_color="#002200",
+        fill_opacity=0.7,
+        stroke_color=PLAINTEXT_COLOR,
+        stroke_width=1.5,
+        corner_radius=0.08,
+    )
+
+    group = VGroup(bg, texts).move_to(position)
+
+    scene.play(FadeIn(group, run_time=0.6))
+    scene.wait(1.5)
+
     return group
 
 
@@ -260,10 +419,17 @@ def scene_transition(scene: Scene):
 
 
 # ── Подпись внизу экрана ─────────────────────────────────
-def show_caption(scene: Scene, text: str, position=None, duration=2.0) -> Text:
-    caption = Text(text, font=FONT, font_size=14, color=GRAY_A)
+def show_caption(scene: Scene, text: str, position=None, duration=2.0):
+    caption = Paragraph(
+        *text.split("\n"),
+        font=FONT,
+        font_size=20,
+        color=GRAY_A,
+        alignment="center"
+    )
     if position is None:
         caption.to_edge(DOWN, buff=0.3)
+        caption.set_x(0)
     else:
         caption.move_to(position)
     scene.play(FadeIn(caption, run_time=0.3))
