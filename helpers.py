@@ -8,7 +8,7 @@ import random
 # ── Цвета ────────────────────────────────────────────────
 BG_COLOR = "#1e1e1e"
 USER_MODE_COLORS = {
-    "app": "#4a90d9",
+    "app": "#d684e2",
     "crt": "#5bb8e8",
     "kernel32": "#50c878",
     "kernelbase": "#8fbc5a",
@@ -277,14 +277,14 @@ def animate_crypto(scene: Scene, packet: VGroup, mode: str, new_text: str, new_c
                 0
             ])
             anims.append(ch.animate.move_to(target).set_color(CIPHERTEXT_COLOR))
-        scene.play(*anims, run_time=0.6)
-        scene.play(*[FadeOut(ch) for ch in chars], run_time=0.2)
+        scene.play(*anims, run_time=1.8)
+        scene.play(*[FadeOut(ch) for ch in chars], run_time=0.6)
     else:
         scene.play(
             *[ch.animate.set_color(PLAINTEXT_COLOR) for ch in chars],
-            run_time=0.4,
+            run_time=1.2,
         )
-        scene.play(*[FadeOut(ch) for ch in chars], run_time=0.2)
+        scene.play(*[FadeOut(ch) for ch in chars], run_time=0.6)
 
     new_label = Text(new_text, font=FONT, font_size=old_label.font_size, color=new_color)
     new_label.move_to(packet[0].get_center())
@@ -299,8 +299,8 @@ def animate_crypto(scene: Scene, packet: VGroup, mode: str, new_text: str, new_c
     )
     old_bg = packet[0]
     scene.play(
-        FadeIn(new_label, run_time=0.3),
-        Transform(old_bg, new_bg, run_time=0.3),
+        FadeIn(new_label, run_time=0.9),
+        Transform(old_bg, new_bg, run_time=0.9),
     )
 
 
