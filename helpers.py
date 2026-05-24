@@ -438,3 +438,119 @@ def show_caption(scene: Scene, text: str, position=None, duration=2.0):
 
 def hide_caption(scene: Scene, caption):
     scene.play(FadeOut(caption, run_time=0.2))
+
+# ═══════════════════════════════════════════════════════════
+#  Маленький замок для анимации шифрования / расшифрования
+# ═══════════════════════════════════════════════════════════
+
+def create_lock_icon(position=ORIGIN, scale=0.35, color=RED, opened=False):
+    body = RoundedRectangle(
+        width=1.6 * scale,
+        height=1.3 * scale,
+        corner_radius=0.2 * scale,
+        color=color,
+        fill_opacity=0.5,
+        fill_color=color
+    )
+
+    keyhole = Circle(
+        radius=0.2 * scale,
+        color=WHITE,
+        fill_opacity=1
+    ).shift(UP * 0.1 * scale)
+
+    keyhole_tail = Rectangle(
+        width=0.1 * scale,
+        height=0.3 * scale,
+        color=WHITE,
+        fill_opacity=1
+    ).next_to(keyhole, DOWN, buff=0)
+
+    keyhole_group = VGroup(keyhole, keyhole_tail)
+
+    start_point = body.get_top() + LEFT * 0.6 * scale
+    end_point = body.get_top() + RIGHT * 0.6 * scale
+
+    shackle = ArcBetweenPoints(
+        start_point,
+        end_point,
+        angle=-PI,
+        color=color,
+        stroke_width=15 * scale
+    )
+
+    lock_group = VGroup(body, keyhole_group, shackle)
+    lock_group.move_to(position)
+
+    pivot = body.get_top() + RIGHT * 0.6 * scale
+
+    if opened:
+        shackle.flip(about_point=pivot)
+
+    return lock_group, body, shackle
+
+
+def get_lock_closing_animation(near_mobject, scale=0.32, run_time=1.0):
+            """
+            Возвращает замок и список анимаций:
+            открытый зелёный -> закрытый красный.
+            Нужно для параллельного запуска с animate_crypto().
+            """
+
+            lock_group, body, shackle = create_lock_icon(
+                position=ORIGIN,
+                scale=scale,
+                color=GREEN,
+                opened=True
+            )
+
+            lock_group.next_to(near_mobject, RIGHT, buff=0.3)
+            lock_group.shift(UP * 0.08)
+
+            pivot = body.get_top() + RIGHT * 0.6 * scale
+
+            closed_body = body.copy()
+            closed_body.set_stroke(RED)
+            closed_body.set_fill(RED, opacity=0.5)
+
+            closed_shackle = shackle.copy()
+            closed_shackle.set_color(RED)
+            closed_shackle.flip(about_point=pivot)
+
+            return lock_group, [
+                FadeIn(lock_group, scale=0.8, run_time=0.25),
+                Transform(body, closed_body, run_time=run_time),
+                Transform(shackle, closed_shackle, run_time=run_time),
+            ]
+
+def get_lock_opening_animation(near_mobject, scale=0.32, run_time=1.0):
+    """
+    Возвращает замок и анимации:
+    закрытый красный -> открытый зелёный.
+    """
+
+    lock_group, body, shackle = create_lock_icon(
+        position=ORIGIN,
+        scale=scale,
+        color=RED,
+        opened=False
+    )
+
+    lock_group.next_to(near_mobject, RIGHT, buff=0.3)
+    lock_group.shift(UP * 0.1)
+
+    pivot = body.get_top() + RIGHT * 0.6 * scale
+
+    opened_body = body.copy()
+    opened_body.set_stroke(GREEN)
+    opened_body.set_fill(GREEN, opacity=0.5)
+
+    opened_shackle = shackle.copy()
+    opened_shackle.set_color(GREEN)
+    opened_shackle.flip(about_point=pivot)
+
+    return lock_group, [
+        FadeIn(lock_group, scale=0.8, run_time=0.25),
+        Transform(body, opened_body, run_time=run_time),
+        Transform(shackle, opened_shackle, run_time=run_time),
+    ]
