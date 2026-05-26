@@ -145,7 +145,7 @@ class Scene1ArchAndWrite(Scene):
         disk_2d = layout["disk"]
         dash = layout["dash"]
 
-        # # # ═══ ЧАСТЬ 1: Обработка данных ══════════════════
+        # # # # ═══ ЧАСТЬ 1: Обработка данных ══════════════════
 
         title = Text(
             "Обработка данных: User Mode → Kernel Mode → Disk",
@@ -156,7 +156,7 @@ class Scene1ArchAndWrite(Scene):
         # Граница
         self.play(GrowFromCenter(boundary[0]), FadeIn(boundary[1], boundary[2]), run_time=0.8)
 
-        # User Mode — блоки по одному
+        # # User Mode — блоки по одному
         for block in um:
             self.play(FadeIn(block, shift=DOWN * 0.12), run_time=0.25)
 
@@ -488,7 +488,7 @@ class Scene1ArchAndWrite(Scene):
         fwrite_result_text.move_to(fwrite_result_rect.get_center())
         fwrite_result_block = VGroup(fwrite_result_rect, fwrite_result_text)
 
-        # рядом с исходной функцией fwrite()
+       
         fwrite_result_block.next_to(code_label, RIGHT, buff=0.35)
 
         self.play(
@@ -496,8 +496,72 @@ class Scene1ArchAndWrite(Scene):
             run_time=0.5
         )
 
+        status_rect_ntdll = RoundedRectangle(
+            corner_radius=0.08, width=1.8, height=0.4,
+            fill_color=PLAINTEXT_COLOR, fill_opacity=0.12,
+            stroke_color=PLAINTEXT_COLOR, stroke_width=2,
+        )
+        status_text_ntdll = Text("STATUS_SUCCESS",
+                font=FONT,
+                font_size=12,
+                color=GREEN)
+        
+        status_text_ntdll.move_to(status_rect_ntdll.get_center())
+        status_block_ntdll = VGroup(status_rect_ntdll, status_text_ntdll)
+        status_block_ntdll.next_to(um[-1], LEFT, buff=0.2)
+
+        status_rect_kernel = RoundedRectangle(
+            corner_radius=0.08, width=1.8, height=0.4,
+            fill_color=PLAINTEXT_COLOR, fill_opacity=0.12,
+            stroke_color=PLAINTEXT_COLOR, stroke_width=2,
+        )
+        status_text_kernel = Text("TRUE",
+                font=FONT,
+                font_size=12,
+                color=GREEN)
+        
+        status_text_kernel.move_to(status_rect_kernel.get_center())
+        status_block_kernel = VGroup(status_rect_kernel, status_text_kernel)
+        status_block_kernel.next_to(um[-2], LEFT, buff=0.2)
+
+        status_rect_kernel32 = RoundedRectangle(
+            corner_radius=0.08, width=1.8, height=0.4,
+            fill_color=PLAINTEXT_COLOR, fill_opacity=0.12,
+            stroke_color=PLAINTEXT_COLOR, stroke_width=2,
+        )
+        status_text_kernel32 = Text("TRUE",
+                font=FONT,
+                font_size=12,
+                color=GREEN)
+        
+        status_text_kernel32.move_to(status_rect_kernel32.get_center())
+        status_block_kernel32 = VGroup(status_rect_kernel32, status_text_kernel32)
+        status_block_kernel32.next_to(um[-3], LEFT, buff=0.2)
+
+        status_rect_msvcrt = RoundedRectangle(
+            corner_radius=0.08, width=1.8, height=0.4,
+            fill_color=PLAINTEXT_COLOR, fill_opacity=0.12,
+            stroke_color=PLAINTEXT_COLOR, stroke_width=2,
+        )
+        status_text_msvcrt = Text("size_t > 0",
+                font=FONT,
+                font_size=12,
+                color=GREEN)
+        
+        status_text_msvcrt.move_to(status_rect_msvcrt.get_center())
+        status_block_msvcrt = VGroup(status_rect_msvcrt, status_text_msvcrt)
+        status_block_msvcrt.next_to(um[-4], LEFT, buff=0.2)
+
         cap12 = show_caption(self, "fwrite() возвращает управление — запись завершена")
         animate_boundary_cross(self, boundary, irp_token, um[-1].get_right() + LEFT * 1.05)
+        self.play(FadeIn(status_block_ntdll), run_time=0.3)
+        animate_boundary_cross(self, boundary, irp_token, um[-2].get_right() + LEFT * 1.05)
+        self.play(FadeIn(status_block_kernel), run_time=0.3)
+        animate_boundary_cross(self, boundary, irp_token, um[-3].get_right() + LEFT * 1.05)
+        self.play(FadeIn(status_block_kernel32), run_time=0.3)
+        animate_boundary_cross(self, boundary, irp_token, um[-4].get_right() + LEFT * 1.05)
+        self.play(FadeIn(status_block_msvcrt), run_time=0.3)
+        animate_boundary_cross(self, boundary, irp_token, um[0].get_right() + LEFT * 1.05)
 
         self.play(
             FadeOut(irp_token),
@@ -506,12 +570,16 @@ class Scene1ArchAndWrite(Scene):
             FadeOut(code_label),
             FadeOut(code_label_api),
             FadeOut(asm),
+            FadeOut(status_block_ntdll),
+            FadeOut(status_block_kernel),
+            FadeOut(status_block_kernel32),
+            FadeOut(status_block_msvcrt),
             run_time=0.3
         )
         self.wait(0.5)
         hide_caption(self, cap12)
 
-        # ═══ ЧАСТЬ 3: Read flow ═════════════════════════
+        # # ═══ ЧАСТЬ 3: Read flow ═════════════════════════
 
         # Смена заголовка
         title3 = Text(
